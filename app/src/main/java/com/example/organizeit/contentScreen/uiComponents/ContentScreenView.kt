@@ -47,14 +47,7 @@ fun ProjectScreenView(parentFolderId: String, navController: NavHostController) 
                             Text(text = "Documents")
                         }
                     }
-                    Row {
-                        Button(onClick = { /*TODO*/ }) {
-                          Text(text = "Camera")
-                        }
-                        Button(onClick = { /*TODO*/ }) {
-                            Text(text = "Audio " )
-                        }
-                    }
+
                 }
                 FolderSectionView(navController = navController)
                 if(!isCRFOAvailable.value){

@@ -21,6 +21,7 @@ import com.example.organizeit.contentScreen.ContentScreenViewModel
 import com.example.organizeit.contentScreen.data.ContentSelectedLauncher
 import com.example.organizeit.contentScreen.data.ProjectContentSelectedLauncher
 import com.example.organizeit.contentScreen.data.ProjectContentTypeString
+import com.example.organizeit.fileProviderUriConverter
 import kotlinx.coroutines.launch
 
 @Composable
@@ -48,8 +49,9 @@ fun VideoView(projectFolderId:String) {
                 ,modifier = Modifier
                     .fillMaxSize()
                     .clickable {
+                        val videoUri= fileProviderUriConverter(context,Uri.parse(item.uri))
                         val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(Uri.parse(item.uri), "video/*")
+                            setDataAndType(videoUri, "video/*")
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         }

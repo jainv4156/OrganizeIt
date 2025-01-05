@@ -14,6 +14,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.organizeit.ContentReceivedFromOutsideApp
+import com.example.organizeit.ContentReceivedFromCamera
 import com.example.organizeit.contentScreen.ContentScreenViewModel
 import kotlinx.coroutines.launch
 
@@ -22,11 +23,14 @@ fun FloatingActionButtonViewForAddingFolder(){
     val viewModel: ContentScreenViewModel = hiltViewModel()
     val scope= rememberCoroutineScope()
     val context:Context= LocalContext.current
-    val isCRFOAvailable=ContentReceivedFromOutsideApp.isCRFOAvailable.collectAsState()
+    val isCRFOAvailable= ContentReceivedFromOutsideApp.isCRFOAvailable.collectAsState()
+    val isPRFCAvailable= ContentReceivedFromCamera.isCRFCAvailable.collectAsState()
+    val isSaveViewActive=isCRFOAvailable.value||isPRFCAvailable.value
+
     Log.d("haha",isCRFOAvailable.toString())
 
-    FloatingActionButton(onClick = { scope.launch {if(isCRFOAvailable.value) viewModel.addContentReceivedFromOutsideAppInDb(context = context ) else viewModel.enableAddNewProjectDialog()} }) {
-        if(isCRFOAvailable.value){
+    FloatingActionButton(onClick = { scope.launch {if(isSaveViewActive) viewModel.saveContent(context = context  ) else viewModel.enableAddNewProjectDialog()} }) {
+        if(isSaveViewActive){
             Icon(imageVector = Icons.Default.Save, contentDescription = "Save Resource")
 
         }

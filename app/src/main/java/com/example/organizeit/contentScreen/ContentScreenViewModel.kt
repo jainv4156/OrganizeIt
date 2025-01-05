@@ -1,43 +1,40 @@
 package com.example.organizeit.contentScreen
 
-import android.content.ContentProvider
-import android.content.ContentResolver
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.organizeit.ContentReceivedFromOutsideApp
+import com.example.organizeit.ContentReceivedFromCamera
 import com.example.organizeit.contentScreen.data.ContentDao
 import com.example.organizeit.contentScreen.data.ContentModel
 import com.example.organizeit.contentScreen.data.FolderContentModel
 import com.example.organizeit.contentScreen.data.ProjectContentTypeString
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
-class ContentScreenViewModel @Inject constructor(private val contentDao:ContentDao):ViewModel(){
+class ContentScreenViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val contentDao:ContentDao
+):ViewModel(){
     private val _folderList = MutableStateFlow<List<FolderContentModel>>(emptyList())
     val folderList = _folderList.asStateFlow()
 
     private var _selectedContentUri = MutableStateFlow<List<ContentModel>>(emptyList())
     val selectedContentUri = _selectedContentUri.asStateFlow()
     private var _parentFolder=MutableStateFlow("")
-    var parentFolder=_parentFolder.asStateFlow()
-//
-//    private var _audioUri = MutableStateFlow<List<Uri>>(emptyList())
-//    val audioUri = _audioUri.asStateFlow()
-//
-//    private var _documentUri = MutableStateFlow<List<Uri>>(emptyList())
-//    val documentUri = _documentUri.asStateFlow()
-//
-//    private var _videoUri = MutableStateFlow<List<Uri>>(emptyList())
-//    val videoUri = _videoUri.asStateFlow()
+    private var parentFolder=_parentFolder.asStateFlow()
 
     private var _projectContentTypeViewOnScreen = MutableStateFlow(ProjectContentTypeString.Photos.value)
     val projectContentTypeViewOnScreen = _projectContentTypeViewOnScreen.asStateFlow()
@@ -56,22 +53,19 @@ class ContentScreenViewModel @Inject constructor(private val contentDao:ContentD
         _folderName.value=name
     }
 
-//    fun updateSelectedImagesUri(uri:List<Uri>){
-//        _selectedContentUri.value+=uri
-//
-//    }
-//    fun updateAudioUri(uri:List<Uri>){
-//        _audioUri.value+=uri
-//    }
-//
-//    fun updateDocumentUri(uri:List<Uri>){
-//        _documentUri.value+=uri
-//
-//    }
 
     suspend fun addContent(id:String,uri:List<Uri>){
         uri.forEach {
-            contentDao.insert(ContentModel(uri=it.toString(),type = projectContentTypeViewOnScreen.value, parentFolder = id))
+            val contentResolver = context.contentResolver
+            val inputStream = contentResolver.openInputStream(it)
+            val file = File(context.filesDir, UUID.randomUUID().toString())
+            val outputStream = FileOutputStream(file)
+            inputStream?.use { input->
+                outputStream.use{output->
+                    input.copyTo(output)
+                }
+            }
+            contentDao.insert(ContentModel(uri=file.absolutePath,type = projectContentTypeViewOnScreen.value, parentFolder = id))
         }
     }
 
@@ -102,17 +96,57 @@ class ContentScreenViewModel @Inject constructor(private val contentDao:ContentD
         }
     }
 
+    suspend fun saveContent(context: Context){
+        if(ContentReceivedFromOutsideApp.isCRFOAvailable.value){
+            addContentReceivedFromOutsideAppInDb(context)
+        }
+        if(ContentReceivedFromCamera.isCRFCAvailable.value){
+            if(ContentReceivedFromCamera.CameraPhotoUris.isNotEmpty()){addPhotoReceivedFromCamera()}
+            if(ContentReceivedFromCamera.videUri!=""){addVideoReceivedFromCamera() }
+        }
+    }
+
+    private suspend fun addVideoReceivedFromCamera() {
+        contentDao.insert(ContentModel(uri=ContentReceivedFromCamera.videUri,type = ProjectContentTypeString.Videos.value, parentFolder = parentFolder.value))
+        ContentReceivedFromCamera.clear()
+    }
+
+    private suspend fun addPhotoReceivedFromCamera() {
+        val bitmaps=ContentReceivedFromCamera.CameraPhotoUris
+        bitmaps.forEach { bitmap->
+            val uri=convertBitMapToUri(bitmap)
+            if(uri!==null){
+                contentDao.insert(ContentModel(uri=uri,type = ProjectContentTypeString.Photos.value, parentFolder = parentFolder.value))
+            }
+        }
+        ContentReceivedFromCamera.clear()
+    }
+
+    private  fun convertBitMapToUri(bitmap: Bitmap): String? {
+        var outputStream: FileOutputStream? = null
+        val file = File(context.filesDir, "Photos_From_Camera"+UUID.randomUUID().toString())
+        try {
+            outputStream = FileOutputStream(file)
+            // Compress the bitmap to JPEG format with 100% quality
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+            // Return the Uri of the saved file
+            return file.absolutePath
+        } catch (e: IOException) {
+            Log.e("saveBitmapToFile", "Error saving bitmap to file: ${e.message}", e)
+            return null
+        } finally {
+            // Ensure the stream is closed, even if an error occurs
+            outputStream?.close()
+        }
+    }
 
 
-    suspend fun addContentReceivedFromOutsideAppInDb(context: Context){
-        Log.d("chulbulla",ContentReceivedFromOutsideApp.isCRFOAvailable.toString())
-        Log.d("mulmula",ContentReceivedFromOutsideApp.sharedFileUris.toString())
+    private suspend fun addContentReceivedFromOutsideAppInDb(context: Context){
         if(ContentReceivedFromOutsideApp.sharedFileUri!=null){
             val contentUri= ContentReceivedFromOutsideApp.sharedFileUri
             val mimeType:String?= context.contentResolver.getType(contentUri!!)
             val type:String = categorizeFile(mimeType)
             contentDao.insert(ContentModel(uri=contentUri.toString(),type = type, parentFolder = parentFolder.value))
-            Log.d("kulla",contentUri.toString())
         }
         if(ContentReceivedFromOutsideApp.sharedFileUris.isNotEmpty()){
             ContentReceivedFromOutsideApp.sharedFileUris.forEach {
@@ -120,7 +154,6 @@ class ContentScreenViewModel @Inject constructor(private val contentDao:ContentD
                 val type:String = categorizeFile(mimeType)
                 contentDao.insert(ContentModel(uri=it.toString(),type = type, parentFolder = parentFolder.value))
             }
-            Log.d("rulla",ContentReceivedFromOutsideApp.sharedFileUris.toString())
         }
         ContentReceivedFromOutsideApp.clear()
     }

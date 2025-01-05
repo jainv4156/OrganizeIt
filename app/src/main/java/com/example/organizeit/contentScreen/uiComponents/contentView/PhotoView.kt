@@ -3,7 +3,6 @@ package com.example.organizeit.contentScreen.uiComponents.contentView
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -17,15 +16,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.organizeit.contentScreen.ContentScreenViewModel
+import com.example.organizeit.contentScreen.data.ContentModel
 import com.example.organizeit.contentScreen.data.ContentSelectedLauncher
 import com.example.organizeit.contentScreen.data.ProjectContentSelectedLauncher
 import com.example.organizeit.contentScreen.data.ProjectContentTypeString
+import com.example.organizeit.fileProviderUriConverter
 import kotlinx.coroutines.launch
 
 @Composable
@@ -49,27 +49,30 @@ fun PhotoView(projectFolderId:String) {
             }}
         items(contentUri.value.filter { it.type == ProjectContentTypeString.Photos.value }){item->
 
-            Text(text = item.uri,Modifier.clickable {  val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(Uri.parse(item.uri), "image/*")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-                context.startActivity(intent) })
+            Text(text = item.uri,Modifier.clickable {
+                openImageOnGallery(item,context)
+
+                 })
             AsyncImage(model = Uri.parse(item.uri),
                 contentDescription = "Photos",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(24.dp)
                     .clickable {
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(Uri.parse(item.uri), "image/*")
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(intent)
-                    })
+                       openImageOnGallery(item,context)
+                    }
+            )
 
         }
     }
 
+}
+fun openImageOnGallery(item:ContentModel,context: Context){
+    val photoUri= fileProviderUriConverter(context, Uri.parse(item.uri))
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(photoUri,"image/*")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
 }

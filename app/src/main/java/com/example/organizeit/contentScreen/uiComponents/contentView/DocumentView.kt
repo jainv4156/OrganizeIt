@@ -22,6 +22,7 @@ import com.example.organizeit.contentScreen.data.ContentSelectedLauncher
 import com.example.organizeit.contentScreen.data.ProjectContentSelectedLauncher
 import com.example.organizeit.contentScreen.data.ProjectContentTypeString
 import com.example.organizeit.contentScreen.document.documentOpener
+import com.example.organizeit.fileProviderUriConverter
 import kotlinx.coroutines.launch
 
 @Composable
@@ -51,7 +52,9 @@ fun DocumentView(projectFolderId:String) {
                 ,modifier = Modifier
                     .fillMaxSize()
                     .clickable {
-                        documentOpener(Uri.parse(item.uri), context)
+                        val documentUri= fileProviderUriConverter(context,Uri.parse(item.uri))
+                        if(documentUri!==null)
+                        documentOpener(documentUri, context)
                     })
         }
     }

@@ -61,7 +61,6 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -87,9 +86,19 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     kapt(libs.androidx.room.compiler)
 
-    //extendIcons
-    implementation(libs.androidx.material.icons.extended)
-
     //imagehandling
     implementation(libs.coil.compose)
+    //material3
+    implementation (libs.material3)
+    //icon
+    implementation(libs.material.icons.extended)
+    // camerax
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.video)
+
+    implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.camera.extensions)
+
 }
